@@ -1,0 +1,61 @@
+name: Build Windows Installer
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+    tags: [ 'v*' ]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+
+    - name: Setup .NET 8
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+
+    - name: Restore
+      run: dotnet restore BankReceiptsManager.sln
+
+    - name: Publish self-contained single-file
+      run: |
+        dotnet publish src/BankReceiptsManager/BankReceiptsManager.csproj `
+          -c Release `
+          -r win-x64 `
+          --self-contained true `
+          -p:PublishSingleFile=true `
+          -p:IncludeNativeLibrariesForSelfExtract=true `
+          -o publish
+
+    - name: Install Inno Setup
+      run: choco install innosetup -y
+
+    - name: Build installer
+      run: |
+        & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" installer/BankReceiptsManager.iss
+
+    - name: Upload installer artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: BankReceiptsManager-Setup
+        path: installer/Output/BankReceiptsManager-Setup.exe
+        retention-days: 30
+
+    - name: Publish GitHub Release
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: v1.0.0
+        name: Bank Receipts Manager Milestone 1
+        body: Windows installer for Bank Receipts Manager Milestone 1. Double-click BankReceiptsManager-Setup.exe to install.
+        files: installer/Output/BankReceiptsManager-Setup.exe
+        fail_on_unmatched_files: true
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
