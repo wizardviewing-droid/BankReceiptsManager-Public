@@ -19,21 +19,19 @@ public class MailInfoService
             var name = table.Rows[r][0]?.ToString()?.Trim() ?? "";
             var email = table.Rows[r].ItemArray.Length > 1 ? table.Rows[r][1]?.ToString()?.Trim() ?? "" : "";
 
-            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email))
-                continue;
-
-            if (!email.Contains('@'))
+            if (string.IsNullOrWhiteSpace(name) || string.IsNullOrWhiteSpace(email) || !email.Contains('@'))
                 continue;
 
             var key = name.Trim();
-            if (map.ContainsKey(key) && map[key] != email)
-                continue; // conflicting – leave for review
-
-            map[key] = email;
+            if (!map.ContainsKey(key))
+                map[key] = email;
         }
 
         return map;
     }
+
+    public List<string> GetHandlerNames(Dictionary<string, string> mailInfo)
+        => mailInfo.Keys.OrderBy(k => k).ToList();
 
     public string? LookupEmail(string? fileHandler, Dictionary<string, string> mailInfo)
     {
@@ -44,11 +42,21 @@ public class MailInfoService
         if (mailInfo.TryGetValue(key, out var email))
             return email;
 
-        // Try loose match (contains)
         var loose = mailInfo.FirstOrDefault(kvp =>
             kvp.Key.Contains(key, StringComparison.OrdinalIgnoreCase) ||
             key.Contains(kvp.Key, StringComparison.OrdinalIgnoreCase));
 
         return loose.Value;
+    }
+
+    public string ResolveNotificationRecipient(string? department, string? individualEmail, AppSettings settings)
+    {
+        if (!string.IsNullOrWhiteSpace(department) &&
+            settings.DepartmentEmailOverrides.TryGetValue(department, out var overrideEmail) &&
+            !string.IsNullOrWhiteSpace(overrideEmail))
+        {
+            return overrideEmail;
+        }
+        return individualEmail ?? "";
     }
 }
