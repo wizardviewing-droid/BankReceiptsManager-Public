@@ -46,7 +46,67 @@ public class AllocationTests
     }
 
     [Fact]
-    public void ZeroOrNegativeAllocation_IsRejectedByValidationLogic()
+    public void DuplicateDetection_ReimportSameFile_DoesNotCreateDuplicates()
+    {
+        var id = Guid.NewGuid();
+        var receipt = new BankReceipt
+        {
+            Id = id,
+            StatementDate = new DateTime(2026, 11, 9),
+            ReceiptAmount = 500m,
+            TransactionDetails = "PAYMENT REF 654321"
+        };
+        var history = new List<BankReceipt> { receipt };
+        var reimport = new List<BankReceipt> { receipt };
+
+        var svc = new Services.DuplicateDetectionService();
+        svc.DetectDuplicates(reimport, history);
+
+        Assert.Single(reimport);
+        Assert.False(reimport[0].IsDuplicate);
+        Assert.Equal(id, reimport[0].Id);
+    }
+
+    [Fact]
+    public void DuplicateDetection_YesterdayProcessedReceipt_IsRecognised()
+    {
+        var yesterday = new BankReceipt
+        {
+            Id = Guid.NewGuid(),
+            StatementDate = new DateTime(2026, 11, 8),
+            ReceiptAmount = 250m,
+            TransactionDetails = "OLD PAYMENT"
+        };
+        var todayImport = new BankReceipt
+        {
+            Id = Guid.NewGuid(),
+            StatementDate = new DateTime(2026, 11, 8),
+            ReceiptAmount = 250m,
+            TransactionDetails = "OLD PAYMENT"
+        };
+
+        var svc = new Services.DuplicateDetectionService();
+        svc.DetectDuplicates(new List<BankReceipt> { todayImport }, new List<BankReceipt> { yesterday });
+
+        Assert.True(todayImport.IsDuplicate);
+    }
+    {
+        var id = Guid.NewGuid();
+        var receipt = new BankReceipt
+        {
+            Id = id,
+            StatementDate = new DateTime(2026, 11, 9),
+            ReceiptAmount = 1000m,
+            TransactionDetails = "TEST REF 123456"
+        };
+        var history = new List<BankReceipt> { receipt };
+        var current = new List<BankReceipt> { receipt };
+
+        var svc = new Services.DuplicateDetectionService();
+        svc.DetectDuplicates(current, history);
+
+        Assert.False(receipt.IsDuplicate);
+    }
     {
         var line = new AllocationLine { AllocatedAmount = 0m };
         Assert.Equal(0m, line.AllocatedAmount);

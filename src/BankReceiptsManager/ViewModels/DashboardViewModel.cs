@@ -39,14 +39,102 @@ public partial class DashboardViewModel : ObservableObject
         _main = main;
         CultureInfo.CurrentCulture = CultureInfo.GetCultureInfo("en-GB");
         CultureInfo.CurrentUICulture = CultureInfo.GetCultureInfo("en-GB");
+        _ = LoadExistingBatchAsync();
+    }
+
+    private async Task LoadExistingBatchAsync()
+    {
+        try
+        {
+            var settings = _settingsService.Load();
+            var storage = new Services.ExcelStorageService(settings.StorageFolder);
+            if (!storage.TestConnection())
+            {
+                StatusMessage = "Shared storage unavailable. Processing is blocked until the folder is accessible.";
+                SaveStatus = "Storage unavailable";
+                return;
+            }
+
+            // Load Mailinfo handlers independently of matching
+            try
+            {
+                _mailLookup = _mailInfo.Load(settings.MailInfoPath);
+                FileHandlers.Clear();
+                foreach (var name in _mailInfo.GetHandlerNames(_mailLookup))
+                    FileHandlers.Add(name);
+            }
+            catch { /* Mailinfo may not be available yet */ }
+
+            var existing = await Task.Run(() => storage.LoadDailyWorkbook(DateTime.Today));
+            if (existing.Count > 0)
+            {
+                Receipts.Clear();
+                foreach (var r in existing)
+                    Receipts.Add(r);
+                UpdateCounts();
+                ApplyFilter();
+                StatusMessage = $"Restored {existing.Count} receipts from today's shared workbook.";
+            }
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not restore previous batch: {ex.Message}";
+        }
     }
 
     partial void OnFilterChanged(string value) => ApplyFilter();
 
+    [ObservableProperty] private string saveStatus = "All changes saved";
+
+    private async Task AutoSaveAsync()
+    {
+        SaveStatus = "Saving...";
+        try
+        {
+            var settings = _settingsService.Load();
+            var storage = new Services.ExcelStorageService(settings.StorageFolder);
+
+            if (!storage.TestConnection())
+            {
+                SaveStatus = "Save failed – shared storage unavailable";
+                StatusMessage = "Cannot save: shared storage is unavailable. Processing blocked.";
+                return;
+            }
+
+            if (!storage.TryAcquireSessionLock(Environment.UserName))
+            {
+                SaveStatus = "Save failed – another user is processing";
+                return;
+            }
+
+            try
+            {
+                var processingDate = DateTime.Today;
+                await Task.Run(() =>
+                {
+                    storage.SaveDailyWorkbook(processingDate, Receipts);
+                    storage.AppendToMasterHistory(Receipts);
+                    var audit = new Services.AuditService(settings.StorageFolder);
+                    audit.Log("BatchSave", "multiple", null, $"Saved {Receipts.Count} receipts");
+                });
+                SaveStatus = "All changes saved";
+            }
+            finally
+            {
+                storage.ReleaseSessionLock();
+            }
+        }
+        catch (Exception ex)
+        {
+            SaveStatus = "Save failed";
+            StatusMessage = $"Save failed: {ex.Message}. Changes are not committed.";
+        }
+    }
+
     [RelayCommand]
     private void BrowseFile()
     {
-        var dialog = new OpenFileDialog
+        var dialog = new Microsoft.Win32.OpenFileDialog
         {
             Filter = "Excel files (*.xls;*.xlsx)|*.xls;*.xlsx|All files (*.*)|*.*",
             Title = "Select Barclays BACS CHAPS RECEIPTS export"
@@ -67,6 +155,14 @@ public partial class DashboardViewModel : ObservableObject
         try
         {
             IsBusy = true;
+            var settings = _settingsService.Load();
+            var storage = new Services.ExcelStorageService(settings.StorageFolder);
+            if (!storage.TestConnection())
+            {
+                StatusMessage = "Shared storage unavailable. Import blocked.";
+                return;
+            }
+
             StatusMessage = "Importing and matching...";
 
             var receipts = await Task.Run(() => _importer.Import(SelectedFilePath));
@@ -78,6 +174,7 @@ public partial class DashboardViewModel : ObservableObject
             await RunMatchingInternal();
 
             StatusMessage = $"Imported {TotalImported} receipts totalling {TotalValue:C2} (GBP). Matching complete.";
+            await AutoSaveAsync();
         }
         catch (Exception ex)
         {
@@ -98,6 +195,7 @@ public partial class DashboardViewModel : ObservableObject
             StatusMessage = "Re-running matching (manual values preserved)...";
             await RunMatchingInternal();
             StatusMessage = "Matching re-run complete. Manual references and file handlers preserved.";
+            await AutoSaveAsync();
         }
         catch (Exception ex)
         {
@@ -120,14 +218,23 @@ public partial class DashboardViewModel : ObservableObject
         foreach (var name in _mailInfo.GetHandlerNames(_mailLookup))
             FileHandlers.Add(name);
 
-        var historyPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "BankReceiptsManager");
-        var history = new Services.ReceiptHistoryService(historyPath).LoadHistory();
+        var storage = new Services.ExcelStorageService(_settings.StorageFolder);
+        if (!storage.TestConnection())
+        {
+            StatusMessage = "Shared storage unavailable. Matching blocked.";
+            return;
+        }
+
+        var history = await Task.Run(() => storage.LoadMasterHistory());
         _duplicates.DetectDuplicates(Receipts.ToList(), history);
 
         foreach (var receipt in Receipts.Where(r => !r.IsRemovedFromBatch))
         {
             if (receipt.IsDuplicate)
             {
+                // Do not overwrite Fully/Partially Allocated statuses
+                if (receipt.Status == ProcessingStatus.FullyAllocated || receipt.Status == ProcessingStatus.PartiallyAllocated)
+                    continue;
                 receipt.Status = ProcessingStatus.Reviewed;
                 continue;
             }
@@ -206,7 +313,16 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void OnFileHandlerChanged(BankReceipt? receipt)
+    private async Task OnManualReferenceChanged(BankReceipt? receipt)
+    {
+        if (receipt == null) return;
+        receipt.IsManualAllocation = true;
+        receipt.AllocationSource = "Manual";
+        await AutoSaveAsync();
+    }
+
+    [RelayCommand]
+    private async Task OnFileHandlerChanged(BankReceipt? receipt)
     {
         if (receipt == null || string.IsNullOrWhiteSpace(receipt.FileHandler)) return;
 
@@ -217,6 +333,8 @@ public partial class DashboardViewModel : ObservableObject
         receipt.MatchingNotes = $"File handler manually set to {receipt.FileHandler}";
         if (receipt.Status == ProcessingStatus.Unmatched)
             receipt.Status = ProcessingStatus.RequiresReview;
+
+        await AutoSaveAsync();
     }
 
     [RelayCommand]
@@ -268,7 +386,7 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void MatchSingle(BankReceipt? receipt)
+    private async Task MatchSingle(BankReceipt? receipt)
     {
         if (receipt == null || string.IsNullOrWhiteSpace(receipt.ManualReference)) return;
 
@@ -306,6 +424,7 @@ public partial class DashboardViewModel : ObservableObject
             UpdateCounts();
             ApplyFilter();
             StatusMessage = $"Matched {reference} for receipt {receipt.AmountFormatted}.";
+            await AutoSaveAsync();
         }
         catch (Exception ex)
         {
@@ -314,7 +433,7 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ClearManual(BankReceipt? receipt)
+    private async Task ClearManual(BankReceipt? receipt)
     {
         if (receipt == null) return;
         receipt.ManualReference = null;
@@ -328,6 +447,7 @@ public partial class DashboardViewModel : ObservableObject
         receipt.AllocationSource = null;
         UpdateCounts();
         ApplyFilter();
+        await AutoSaveAsync();
     }
 
     [RelayCommand]
@@ -338,6 +458,7 @@ public partial class DashboardViewModel : ObservableObject
         receipt.IsSplit = true;
         if (receipt.Allocations.Count == 0)
             receipt.Allocations.Add(new AllocationLine { AllocatedAmount = 0 });
+        _ = AutoSaveAsync();
     }
 
     [RelayCommand]
@@ -359,6 +480,7 @@ public partial class DashboardViewModel : ObservableObject
                 receipt.Allocations.Remove(line);
                 receipt.RefreshAllocationTotals();
                 StatusMessage = "Allocation line removed.";
+                _ = AutoSaveAsync();
                 break;
             }
         }
