@@ -49,45 +49,41 @@ public partial class DashboardViewModel : ObservableObject
 
         try
         {
+            Services.StartupLogger.Log("LoadExistingBatch", "Starting restore");
             var settings = _settingsService.Load();
 
-            // All shared-folder access runs off the UI thread so a missing or slow drive cannot hang the window
-            var result = await Task.Run(() =>
+            if (string.IsNullOrWhiteSpace(settings.StorageFolder))
             {
-                var storage = new Services.ExcelStorageService(settings.StorageFolder);
-                if (!storage.TestConnection())
-                    return (Available: false, MailLookup: (Dictionary<string, string>?)null, Handlers: (List<string>?)null, Existing: (List<BankReceipt>?)null);
-
-                // Load Mailinfo handlers independently of matching
-                Dictionary<string, string>? mailLookup = null;
-                List<string>? handlers = null;
-                try
-                {
-                    mailLookup = _mailInfo.Load(settings.MailInfoPath);
-                    handlers = _mailInfo.GetHandlerNames(mailLookup);
-                }
-                catch { /* Mailinfo may not be available yet */ }
-
-                var existing = storage.LoadDailyWorkbook(DateTime.Today);
-                return (Available: true, MailLookup: mailLookup, Handlers: handlers, Existing: existing);
-            });
-
-            if (!result.Available)
-            {
-                StatusMessage = "Shared storage unavailable. Processing is blocked until the folder is accessible.";
-                SaveStatus = "Storage unavailable";
+                StatusMessage = "Shared storage not configured. Open Settings to set the folder before processing.";
+                SaveStatus = "Storage not configured";
+                Services.StartupLogger.Log("LoadExistingBatch", "Storage folder empty");
                 return;
             }
 
-            if (result.MailLookup != null && result.Handlers != null)
+            var storage = new Services.ExcelStorageService(settings.StorageFolder);
+            // Shared-folder access runs off the UI thread so a missing or slow drive cannot hang the window
+            if (!await Task.Run(() => storage.TestConnection()))
             {
-                _mailLookup = result.MailLookup;
-                FileHandlers.Clear();
-                foreach (var name in result.Handlers)
-                    FileHandlers.Add(name);
+                StatusMessage = "Shared storage unavailable. Processing is disabled until the folder is accessible. Settings remain available.";
+                SaveStatus = "Storage unavailable";
+                Services.StartupLogger.Log("LoadExistingBatch", "Storage unavailable – continuing");
+                return;
             }
 
-            var existing = result.Existing!;
+            try
+            {
+                _mailLookup = await Task.Run(() => _mailInfo.Load(settings.MailInfoPath));
+                FileHandlers.Clear();
+                foreach (var name in _mailInfo.GetHandlerNames(_mailLookup))
+                    FileHandlers.Add(name);
+            }
+            catch (Exception ex)
+            {
+                Services.StartupLogger.Log("LoadMailinfo", "Mailinfo unavailable", ex);
+                StatusMessage = "Mailinfo could not be loaded. Processing is limited until the file is available.";
+            }
+
+            var existing = await Task.Run(() => storage.LoadDailyWorkbook(DateTime.Today));
             if (existing.Count > 0)
             {
                 Receipts.Clear();
@@ -97,10 +93,13 @@ public partial class DashboardViewModel : ObservableObject
                 ApplyFilter();
                 StatusMessage = $"Restored {existing.Count} receipts from today's shared workbook.";
             }
+            Services.StartupLogger.Log("LoadExistingBatch", "Restore complete");
         }
         catch (Exception ex)
         {
-            StatusMessage = $"Could not restore previous batch: {ex.Message}";
+            Services.StartupLogger.Log("LoadExistingBatch", "Unhandled during restore", ex);
+            StatusMessage = $"Startup restore skipped: {ex.Message}. The application is usable; processing is disabled until storage is available.";
+            SaveStatus = "Restore failed";
         }
     }
 
@@ -335,9 +334,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task OnManualReferenceChanged(BankReceipt? receipt)
+    private async Task OnManualReferenceChanged(object? parameter)
     {
-        if (receipt == null) return;
+        if (parameter is not BankReceipt receipt) return;
         receipt.IsManualAllocation = true;
         receipt.AllocationSource = "Manual";
         await AutoSaveAsync();
@@ -356,13 +355,13 @@ public partial class DashboardViewModel : ObservableObject
         if (receipt.Status == ProcessingStatus.Unmatched)
             receipt.Status = ProcessingStatus.RequiresReview;
 
-        await AutoSaveAsync();
+        _ = AutoSaveAsync();
     }
 
     [RelayCommand]
-    private void RemoveReceipt(BankReceipt? receipt)
+    private void RemoveReceipt(object? parameter)
     {
-        if (receipt == null) return;
+        if (parameter is not BankReceipt receipt) return;
 
         var result = MessageBox.Show(
             "Are you sure you want to remove this receipt from the current processing batch?",
@@ -408,9 +407,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task MatchSingle(BankReceipt? receipt)
+    private async Task MatchSingle(object? parameter)
     {
-        if (receipt == null || string.IsNullOrWhiteSpace(receipt.ManualReference)) return;
+        if (parameter is not BankReceipt receipt || string.IsNullOrWhiteSpace(receipt.ManualReference)) return;
 
         try
         {
@@ -455,9 +454,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private async Task ClearManual(BankReceipt? receipt)
+    private async Task ClearManual(object? parameter)
     {
-        if (receipt == null) return;
+        if (parameter is not BankReceipt receipt) return;
         receipt.ManualReference = null;
         receipt.IsManualAllocation = false;
         receipt.FileHandler = null;
@@ -473,9 +472,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void ExpandSplit(BankReceipt? receipt)
+    private void ExpandSplit(object? parameter)
     {
-        if (receipt == null) return;
+        if (parameter is not BankReceipt receipt) return;
         receipt.IsExpanded = !receipt.IsExpanded;
         receipt.IsSplit = true;
         if (receipt.Allocations.Count == 0)
@@ -484,17 +483,17 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void AddAllocation(BankReceipt? receipt)
+    private void AddAllocation(object? parameter)
     {
-        if (receipt == null) return;
+        if (parameter is not BankReceipt receipt) return;
         receipt.Allocations.Add(new AllocationLine());
         receipt.RefreshAllocationTotals();
     }
 
     [RelayCommand]
-    private void RemoveAllocation(AllocationLine? line)
+    private void RemoveAllocation(object? parameter)
     {
-        if (line == null) return;
+        if (parameter is not AllocationLine line) return;
         foreach (var receipt in Receipts)
         {
             if (receipt.Allocations.Contains(line))
@@ -509,9 +508,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void RefreshAllocation(BankReceipt? receipt)
+    private void RefreshAllocation(object? parameter)
     {
-        if (receipt == null) return;
+        if (parameter is not BankReceipt receipt) return;
         receipt.RefreshAllocationTotals();
         if (receipt.IsOverAllocated)
             StatusMessage = $"Overallocated by {Math.Abs(receipt.RemainingBalance):C2}. Cannot finalise.";
@@ -524,9 +523,9 @@ public partial class DashboardViewModel : ObservableObject
     }
 
     [RelayCommand]
-    private void MatchAllocation(AllocationLine? line)
+    private void MatchAllocation(object? parameter)
     {
-        if (line == null || string.IsNullOrWhiteSpace(line.CaseReference)) return;
+        if (parameter is not AllocationLine line || string.IsNullOrWhiteSpace(line.CaseReference)) return;
 
         try
         {
