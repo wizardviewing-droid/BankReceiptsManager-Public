@@ -25,6 +25,9 @@ jobs:
     - name: Restore
       run: dotnet restore BankReceiptsManager.sln
 
+    - name: Run tests
+      run: dotnet test BankReceiptsManager.sln -c Release --no-restore
+
     - name: Publish self-contained single-file
       run: |
         dotnet publish src/BankReceiptsManager/BankReceiptsManager.csproj `
@@ -52,10 +55,13 @@ jobs:
     - name: Publish GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v1.0.0
-        name: Bank Receipts Manager Milestone 1
-        body: Windows installer for Bank Receipts Manager Milestone 1. Double-click BankReceiptsManager-Setup.exe to install.
+        tag_name: v1.2.0
+        name: Bank Receipts Manager v1.2
+        body: Windows installer for Bank Receipts Manager v1.2 (1.2.0-milestone1, split-allocation UI). Double-click BankReceiptsManager-Setup.exe to install. Email sending is disabled in this testing version.
         files: installer/Output/BankReceiptsManager-Setup.exe
+        draft: false
+        prerelease: false
+        make_latest: true
         fail_on_unmatched_files: true
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
