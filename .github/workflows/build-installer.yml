@@ -55,9 +55,9 @@ jobs:
     - name: Publish GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v1.3.6
-        name: Bank Receipts Manager v1.3.6
-        body: Windows installer for Bank Receipts Manager v1.3.6 (1.3.6-milestone1). Launch fix for 1.3.5. Double-click BankReceiptsManager-Setup.exe to install. Email sending is disabled in this testing version.
+        tag_name: v1.3.7
+        name: Bank Receipts Manager v1.3.7
+        body: Windows installer for Bank Receipts Manager v1.3.7 (1.3.7-milestone1). Fixes the startup crash (command parameter MS.Internal.NamedObject) and adds startup logging. Double-click BankReceiptsManager-Setup.exe to install. Email sending is disabled in this testing version.
         files: installer/Output/BankReceiptsManager-Setup.exe
         draft: false
         prerelease: false
