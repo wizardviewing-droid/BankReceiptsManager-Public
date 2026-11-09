@@ -16,8 +16,17 @@
             <TextBox Text="{Binding MailInfoFileName}" Margin="0,4,0,12" Padding="6"/>
             <TextBlock Text="Conveyancing shared mailbox (overrides individual fee earner)" FontWeight="SemiBold"/>
             <TextBox Text="{Binding ConveyancingEmail}" Margin="0,4,0,12" Padding="6"/>
-            <TextBlock Text="Storage folder (for later milestones)" FontWeight="SemiBold"/>
-            <TextBox Text="{Binding StorageFolder}" Margin="0,4,0,12" Padding="6"/>
+            <TextBlock Text="Data Storage" FontSize="18" FontWeight="Bold" Margin="0,16,0,8"/>
+            <TextBlock Text="Shared folder (all users must use the same location)" FontWeight="SemiBold"/>
+            <StackPanel Orientation="Horizontal" Margin="0,4,0,8">
+                <TextBox Text="{Binding StorageFolder}" Width="420" Padding="6"/>
+                <Button Content="Browse..." Command="{Binding BrowseStorageCommand}" Margin="8,0,0,0"/>
+            </StackPanel>
+            <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                <Button Content="Test Connection" Command="{Binding TestStorageCommand}" Margin="0,0,8,0"/>
+                <Button Content="Save Location" Command="{Binding SaveCommand}" Background="#00A86B"/>
+            </StackPanel>
+            <TextBlock Text="{Binding StorageStatus}" Foreground="#0066CC" Margin="0,0,0,16"/>
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                 <Button Content="Save Settings" Command="{Binding SaveCommand}" Background="#00A86B"/>
                 <Button Content="Reload" Command="{Binding LoadCommand}" Margin="8,0,0,0"/>

@@ -12,7 +12,11 @@ public class MailInfoService
         if (!File.Exists(mailInfoPath))
             throw new FileNotFoundException($"Mailinfo file not found: {mailInfoPath}");
 
-        var table = LookupFileReader.ReadFirstSheet(mailInfoPath);
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
+        using var stream = File.Open(mailInfoPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = ExcelReaderFactory.CreateReader(stream);
+        var table = reader.AsDataSet().Tables[0];
 
         for (int r = 1; r < table.Rows.Count; r++)
         {
