@@ -8,7 +8,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <AssemblyName>BankReceiptsManager</AssemblyName>
     <RootNamespace>BankReceiptsManager</RootNamespace>
-    <Version>1.0.0-milestone1</Version>
+    <Version>1.2.0-milestone1</Version>
     <Authors>True Solicitors LLP - Accounts</Authors>
     <Description>Bank Receipts Manager - Milestone 1: Working receipt processor</Description>
     <Copyright>Copyright © 2026 True Solicitors LLP</Copyright>
