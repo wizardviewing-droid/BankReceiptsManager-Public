@@ -44,28 +44,50 @@ public partial class DashboardViewModel : ObservableObject
 
     private async Task LoadExistingBatchAsync()
     {
+        // Let MainViewModel construction and MainWindow finish before touching shared storage
+        await Task.Yield();
+
         try
         {
             var settings = _settingsService.Load();
-            var storage = new Services.ExcelStorageService(settings.StorageFolder);
-            if (!storage.TestConnection())
+
+            // All shared-folder access runs off the UI thread so a missing or slow drive cannot hang the window
+            var result = await Task.Run(() =>
+            {
+                var storage = new Services.ExcelStorageService(settings.StorageFolder);
+                if (!storage.TestConnection())
+                    return (Available: false, MailLookup: (Dictionary<string, string>?)null, Handlers: (List<string>?)null, Existing: (List<BankReceipt>?)null);
+
+                // Load Mailinfo handlers independently of matching
+                Dictionary<string, string>? mailLookup = null;
+                List<string>? handlers = null;
+                try
+                {
+                    mailLookup = _mailInfo.Load(settings.MailInfoPath);
+                    handlers = _mailInfo.GetHandlerNames(mailLookup);
+                }
+                catch { /* Mailinfo may not be available yet */ }
+
+                var existing = storage.LoadDailyWorkbook(DateTime.Today);
+                return (Available: true, MailLookup: mailLookup, Handlers: handlers, Existing: existing);
+            });
+
+            if (!result.Available)
             {
                 StatusMessage = "Shared storage unavailable. Processing is blocked until the folder is accessible.";
                 SaveStatus = "Storage unavailable";
                 return;
             }
 
-            // Load Mailinfo handlers independently of matching
-            try
+            if (result.MailLookup != null && result.Handlers != null)
             {
-                _mailLookup = _mailInfo.Load(settings.MailInfoPath);
+                _mailLookup = result.MailLookup;
                 FileHandlers.Clear();
-                foreach (var name in _mailInfo.GetHandlerNames(_mailLookup))
+                foreach (var name in result.Handlers)
                     FileHandlers.Add(name);
             }
-            catch { /* Mailinfo may not be available yet */ }
 
-            var existing = await Task.Run(() => storage.LoadDailyWorkbook(DateTime.Today));
+            var existing = result.Existing!;
             if (existing.Count > 0)
             {
                 Receipts.Clear();

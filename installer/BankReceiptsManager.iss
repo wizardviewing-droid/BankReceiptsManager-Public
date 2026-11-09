@@ -3,7 +3,7 @@
 ; Produces: Output\BankReceiptsManager-Setup.exe
 
 #define MyAppName "Bank Receipts Manager"
-#define MyAppVersion "1.3.5-milestone1"
+#define MyAppVersion "1.3.6-milestone1"
 #define MyAppPublisher "True Solicitors LLP"
 #define MyAppExeName "BankReceiptsManager.exe"
 
