@@ -55,9 +55,9 @@ jobs:
     - name: Publish GitHub Release
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v1.3.8
-        name: Bank Receipts Manager v1.3.8
-        body: Windows installer for Bank Receipts Manager v1.3.8 (1.3.8-milestone1). True Solicitors yellow/navy dashboard redesign on top of the 1.3.7 startup crash fix. Double-click BankReceiptsManager-Setup.exe to install. Email sending is disabled in this testing version.
+        tag_name: v1.3.9
+        name: Bank Receipts Manager v1.3.9
+        body: Windows installer for Bank Receipts Manager v1.3.9 (1.3.9-milestone1). Dashboard header and window sizing update. Double-click BankReceiptsManager-Setup.exe to install. Email sending is disabled in this testing version.
         files: installer/Output/BankReceiptsManager-Setup.exe
         draft: false
         prerelease: false

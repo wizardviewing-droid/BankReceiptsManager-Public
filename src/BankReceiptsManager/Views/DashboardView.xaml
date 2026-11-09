@@ -12,11 +12,11 @@
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Yellow header -->
-        <Border Grid.ColumnSpan="2" Background="#F5C518" Padding="16,10">
+        <!-- Yellow header matching reference -->
+        <Border Grid.ColumnSpan="2" Background="#F5C518" Padding="20,12">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="true solicitors" FontSize="18" FontWeight="Bold" Foreground="#0A2540" VerticalAlignment="Center"/>
-                <TextBlock Text="  Receipts Manager" FontSize="18" Foreground="#0A2540" VerticalAlignment="Center"/>
+                <TextBlock Text="true solicitors" FontSize="20" FontWeight="Bold" Foreground="#0A2540" VerticalAlignment="Center"/>
+                <TextBlock Text="  |  Receipts Manager" FontSize="18" Foreground="#0A2540" VerticalAlignment="Center" Margin="8,0,0,0"/>
             </StackPanel>
         </Border>
 
