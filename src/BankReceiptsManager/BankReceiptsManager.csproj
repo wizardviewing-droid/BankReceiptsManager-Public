@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <UseWPF>true</UseWPF>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>BankReceiptsManager</AssemblyName>
+    <RootNamespace>BankReceiptsManager</RootNamespace>
+    <Version>1.0.0-milestone1</Version>
+    <Authors>True Solicitors LLP - Accounts</Authors>
+    <Description>Bank Receipts Manager - Milestone 1: Working receipt processor</Description>
+    <Copyright>Copyright © 2026 True Solicitors LLP</Copyright>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="ClosedXML" Version="0.104.2" />
+    <PackageReference Include="ExcelDataReader" Version="3.7.0" />
+    <PackageReference Include="ExcelDataReader.DataSet" Version="3.7.0" />
+    <PackageReference Include="CommunityToolkit.Mvvm" Version="8.3.2" />
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="8.0.1" />
+    <PackageReference Include="Microsoft.Extensions.Logging" Version="8.0.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Resource Include="Resources\**" Exclude="Resources\**\*.xaml" />
+  </ItemGroup>
+
+</Project>
