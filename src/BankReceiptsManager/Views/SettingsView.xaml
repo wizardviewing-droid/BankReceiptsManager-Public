@@ -14,6 +14,8 @@
             <TextBox Text="{Binding ConvFileName}" Margin="0,4,0,12" Padding="6"/>
             <TextBlock Text="Mailinfo filename (.xlsx or .xls)" FontWeight="SemiBold"/>
             <TextBox Text="{Binding MailInfoFileName}" Margin="0,4,0,12" Padding="6"/>
+            <TextBlock Text="Conveyancing shared mailbox (overrides individual fee earner)" FontWeight="SemiBold"/>
+            <TextBox Text="{Binding ConveyancingEmail}" Margin="0,4,0,12" Padding="6"/>
             <TextBlock Text="Storage folder (for later milestones)" FontWeight="SemiBold"/>
             <TextBox Text="{Binding StorageFolder}" Margin="0,4,0,12" Padding="6"/>
             <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
