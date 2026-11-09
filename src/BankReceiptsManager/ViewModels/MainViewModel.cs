@@ -17,7 +17,7 @@ public partial class MainViewModel : ObservableObject
 
     public MainViewModel()
     {
-        Dashboard = new DashboardViewModel();
+        Dashboard = new DashboardViewModel(this);
         Import = new ImportViewModel(this);
         Review = new ReviewViewModel(this);
         Settings = new SettingsViewModel();

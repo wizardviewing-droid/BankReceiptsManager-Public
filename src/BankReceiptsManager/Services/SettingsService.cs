@@ -8,9 +8,15 @@ public class AppSettings
     public string PiReportFileName { get; set; } = "PI All cases.csv";
     public string HdrReportFileName { get; set; } = "HDR All cases - Balance review.csv";
     public string ConvReportFileName { get; set; } = "All cases Conv.csv";
-    public string MailInfoFileName { get; set; } = "Mailinfo.xlsx"; // or .xls – user can change
+    public string MailInfoFileName { get; set; } = "Mailinfo.xlsx";
     public string StorageFolder { get; set; } = @"Y:\accounts\Receipts Manager\";
-    public bool EmailSendingEnabled { get; set; } = false; // disabled for Milestone 1
+    public bool EmailSendingEnabled { get; set; } = false;
+
+    // Departmental email overrides (key = department name, value = shared mailbox)
+    public Dictionary<string, string> DepartmentEmailOverrides { get; set; } = new(StringComparer.OrdinalIgnoreCase)
+    {
+        ["Conveyancing"] = "team_conveyancing@true.co.uk"
+    };
 
     public string PiPath => Path.Combine(ReportsFolder, PiReportFileName);
     public string HdrPath => Path.Combine(ReportsFolder, HdrReportFileName);

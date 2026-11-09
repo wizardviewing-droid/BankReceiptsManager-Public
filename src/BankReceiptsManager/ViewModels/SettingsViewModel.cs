@@ -12,6 +12,7 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string hdrFileName = "HDR All cases - Balance review.csv";
     [ObservableProperty] private string convFileName = "All cases Conv.csv";
     [ObservableProperty] private string mailInfoFileName = "Mailinfo.xlsx";
+    [ObservableProperty] private string conveyancingEmail = "team_conveyancing@true.co.uk";
     [ObservableProperty] private string storageFolder = @"Y:\accounts\Receipts Manager\";
     [ObservableProperty] private string saveMessage = "";
 
@@ -30,6 +31,8 @@ public partial class SettingsViewModel : ObservableObject
         ConvFileName = s.ConvReportFileName;
         MailInfoFileName = s.MailInfoFileName;
         StorageFolder = s.StorageFolder;
+        if (s.DepartmentEmailOverrides.TryGetValue("Conveyancing", out var conv))
+            ConveyancingEmail = conv;
         SaveMessage = "Settings loaded.";
     }
 
@@ -44,7 +47,11 @@ public partial class SettingsViewModel : ObservableObject
             ConvReportFileName = ConvFileName,
             MailInfoFileName = MailInfoFileName,
             StorageFolder = StorageFolder.TrimEnd('\\') + "\\",
-            EmailSendingEnabled = false
+            EmailSendingEnabled = false,
+            DepartmentEmailOverrides = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
+            {
+                ["Conveyancing"] = ConveyancingEmail.Trim()
+            }
         };
         _settingsService.Save(s);
         SaveMessage = "Settings saved. Matching will use these paths on next run.";
