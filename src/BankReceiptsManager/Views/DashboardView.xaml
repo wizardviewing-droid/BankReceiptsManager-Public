@@ -27,7 +27,7 @@
             <Border Background="White" CornerRadius="8" Padding="16" Margin="0,0,12,8" MinWidth="180">
                 <StackPanel>
                     <TextBlock Text="Total Value" Foreground="#666" FontSize="12"/>
-                    <TextBlock Text="{Binding TotalValue, StringFormat='£#,##0.00'}" FontSize="28" FontWeight="Bold" Foreground="#00A86B"/>
+                    <TextBlock Text="{Binding TotalValue, StringFormat='£{0:N2}'}" FontSize="28" FontWeight="Bold" Foreground="#00A86B"/>
                 </StackPanel>
             </Border>
             <Border Background="White" CornerRadius="8" Padding="16" Margin="0,0,12,8" MinWidth="140">
@@ -56,7 +56,7 @@
             <Button Content="Browse..." Command="{Binding BrowseFileCommand}" Margin="0,0,8,0"/>
             <Button Content="Import &amp; Match" Command="{Binding ImportAndMatchCommand}" Background="#00A86B" FontWeight="Bold" Padding="16,8"/>
             <Button Content="Re-run Matching" Command="{Binding ReRunMatchingCommand}" Margin="8,0,0,0"/>
-            <TextBlock Text="{Binding StatusMessage}" VerticalAlignment="Center" Margin="16,0,0,0" TextWrapping="Wrap" MaxWidth="400"/>
+            <TextBlock Text="{Binding SaveStatus}" VerticalAlignment="Center" Margin="16,0,0,0" FontStyle="Italic" Foreground="#0066CC"/>
         </StackPanel>
 
         <!-- Filters + table -->
@@ -85,21 +85,29 @@
                       GridLinesVisibility="Horizontal"
                       HorizontalScrollBarVisibility="Auto"
                       VerticalScrollBarVisibility="Auto"
-                      RowDetailsVisibilityMode="Visible">
+                      RowDetailsVisibilityMode="VisibleWhenSelected">
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="Date" Binding="{Binding DateFormatted}" Width="90" IsReadOnly="True"/>
                     <DataGridTextColumn Header="Amount" Binding="{Binding AmountFormatted}" Width="110" IsReadOnly="True"/>
                     <DataGridTextColumn Header="Details" Binding="{Binding TransactionDetails}" Width="280" IsReadOnly="True"/>
                     <DataGridTextColumn Header="Customer Ref" Binding="{Binding CustomerReference}" Width="130" IsReadOnly="True"/>
                     <DataGridTextColumn Header="Extracted Ref" Binding="{Binding ExtractedReference}" Width="110" IsReadOnly="True"/>
-                    <DataGridTextColumn Header="Manual Reference" Binding="{Binding ManualReference, UpdateSourceTrigger=PropertyChanged}" Width="130"/>
+                    <DataGridTemplateColumn Header="Manual Reference" Width="130">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <TextBox Text="{Binding ManualReference, UpdateSourceTrigger=LostFocus}"
+                                         LostFocus="ManualReference_LostFocus"/>
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
                     <DataGridTextColumn Header="Department" Binding="{Binding Department}" Width="100" IsReadOnly="True"/>
                     <DataGridTemplateColumn Header="File Handler" Width="160">
                         <DataGridTemplateColumn.CellTemplate>
                             <DataTemplate>
                                 <ComboBox ItemsSource="{Binding DataContext.FileHandlers, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                           SelectedItem="{Binding FileHandler, UpdateSourceTrigger=PropertyChanged}"
-                                          IsEditable="True"/>
+                                          IsEditable="True"
+                                          SelectionChanged="FileHandlerCombo_SelectionChanged"/>
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>
@@ -153,7 +161,7 @@
                                                     <ColumnDefinition Width="Auto"/>
                                                 </Grid.ColumnDefinitions>
                                                 <TextBox Grid.Column="0" Text="{Binding CaseReference, UpdateSourceTrigger=PropertyChanged}" ToolTip="Proclaim reference"/>
-                                                <TextBox Grid.Column="1" Text="{Binding AllocatedAmount, UpdateSourceTrigger=LostFocus, StringFormat=N2}" ToolTip="Amount"/>
+                                                <TextBox Grid.Column="1" Text="{Binding AllocatedAmount, UpdateSourceTrigger=PropertyChanged, StringFormat=N2}" ToolTip="Amount"/>
                                                 <TextBlock Grid.Column="2" Text="{Binding Department}" VerticalAlignment="Center"/>
                                                 <ComboBox Grid.Column="3" ItemsSource="{Binding DataContext.FileHandlers, RelativeSource={RelativeSource AncestorType=UserControl}}"
                                                           SelectedItem="{Binding FileHandler, UpdateSourceTrigger=PropertyChanged}" IsEditable="True"/>

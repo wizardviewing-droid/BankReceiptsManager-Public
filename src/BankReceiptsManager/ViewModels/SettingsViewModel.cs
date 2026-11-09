@@ -12,9 +12,10 @@ public partial class SettingsViewModel : ObservableObject
     [ObservableProperty] private string hdrFileName = "HDR All cases - Balance review.csv";
     [ObservableProperty] private string convFileName = "All cases Conv.csv";
     [ObservableProperty] private string mailInfoFileName = "Mailinfo.xlsx";
-    [ObservableProperty] private string conveyancingEmail = "team_conveyancing@true.co.uk";
     [ObservableProperty] private string storageFolder = @"Y:\accounts\Receipts Manager\";
+    [ObservableProperty] private string conveyancingEmail = "team_conveyancing@true.co.uk";
     [ObservableProperty] private string saveMessage = "";
+    [ObservableProperty] private string storageStatus = "";
 
     public SettingsViewModel()
     {
@@ -37,6 +38,33 @@ public partial class SettingsViewModel : ObservableObject
     }
 
     [RelayCommand]
+    private void BrowseStorage()
+    {
+        var dialog = new Microsoft.Win32.OpenFolderDialog
+        {
+            Title = "Select shared storage folder for Receipts Manager"
+        };
+        if (dialog.ShowDialog() == true)
+            StorageFolder = dialog.FolderName + "\\";
+    }
+
+    [RelayCommand]
+    private void TestStorage()
+    {
+        try
+        {
+            var svc = new Services.ExcelStorageService(StorageFolder);
+            StorageStatus = svc.TestConnection()
+                ? "Connection successful. Folder is writable."
+                : "Connection failed. Check permissions and network availability.";
+        }
+        catch (Exception ex)
+        {
+            StorageStatus = $"Error: {ex.Message}";
+        }
+    }
+
+    [RelayCommand]
     private void Save()
     {
         var s = new Services.AppSettings
@@ -54,6 +82,6 @@ public partial class SettingsViewModel : ObservableObject
             }
         };
         _settingsService.Save(s);
-        SaveMessage = "Settings saved. Matching will use these paths on next run.";
+        SaveMessage = "Settings saved. All users must use this shared location.";
     }
 }

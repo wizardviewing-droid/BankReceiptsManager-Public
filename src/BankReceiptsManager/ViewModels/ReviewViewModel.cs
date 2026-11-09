@@ -60,7 +60,7 @@ public partial class ReviewViewModel : ObservableObject
         var matched = Receipts.Count(r => r.Status == ProcessingStatus.Matched);
         var review = Receipts.Count(r => r.Status == ProcessingStatus.RequiresReview);
         var unmatched = Receipts.Count(r => r.Status == ProcessingStatus.Unmatched);
-        StatusSummary = $"Total: {Receipts.Count} | Matched: {matched} | Review: {review} | Unmatched: {unmatched}";
+        statusSummary = $"Total: {Receipts.Count} | Matched: {matched} | Review: {review} | Unmatched: {unmatched}";
     }
 
     [RelayCommand]
@@ -69,7 +69,7 @@ public partial class ReviewViewModel : ObservableObject
         try
         {
             var settings = _settingsService.Load();
-            MatchingStatus = "Loading reports...";
+            matchingStatus = "Loading reports...";
 
             var caseLookup = _caseLookup.LoadAllCases(settings.PiPath, settings.HdrPath, settings.ConvPath);
             var mailLookup = _mailInfo.Load(settings.MailInfoPath);
@@ -138,12 +138,12 @@ public partial class ReviewViewModel : ObservableObject
 
             ApplyFilter();
             UpdateSummary();
-            MatchingStatus = "Matching complete";
+            matchingStatus = "Matching complete";
             _main.SetStatus("Matching completed against live reports.");
         }
         catch (Exception ex)
         {
-            MatchingStatus = "Error";
+            matchingStatus = "Error";
             _main.SetStatus($"Matching failed: {ex.Message}");
         }
     }
