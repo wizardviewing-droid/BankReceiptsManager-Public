@@ -1,6 +1,72 @@
 # Bank Receipts Manager – Milestone 1
 
-## Version 1.2 (completed bulk allocation UI)
+## Version 1.3.4 – Review defect fixes
+
+- Fixed DataRow.Length → ItemArray.Length (compilation).
+- Removed invalid app.ico reference.
+- Corrected £ currency format in XAML.
+- Improved duplicate detection so receipts already in the current batch are not treated as duplicates of themselves on re-import or re-run.
+- File handler selection sets manual override.
+- Auto-save on major actions.
+- Shared history used for duplicate checks.
+- Startup restores daily workbook.
+- Email sending remains disabled.
+
+**Untested from this environment**
+- Actual Windows compilation and installer build.
+- Multi-user concurrent access.
+- Network disconnect mid-write.
+
+Push to GitHub and run **Build Windows Installer**.
+
+- File Handler ComboBox selection now sets the manual override flag and auto-saves.
+- Startup loads today’s shared daily workbook and restores all saved state.
+- Duplicate detection uses shared Receipts History.xlsx only.
+- Processing is blocked if shared storage is unavailable.
+- Exclusive lock with stale recovery.
+- Audit Log.xlsx records committed changes (username, timestamp, action).
+- All major actions trigger AutoSaveAsync.
+- Email sending remains disabled.
+
+**Untested from this environment**
+- Real multi-user concurrent access.
+- Network disconnect mid-write on Windows.
+- Full Windows UI automation.
+
+- On startup the application loads today’s daily workbook from the configured shared folder and restores all saved receipts, manual references, file handlers, allocation lines and statuses.
+- Duplicate detection uses the shared `Receipts History.xlsx` (not local files).
+- Processing is blocked if the shared folder is unavailable or not writable.
+- Exclusive lock with stale-lock recovery (locks older than 4 hours are cleared). Only one user can process at a time.
+- Every major data-changing action still auto-saves to the daily workbook and master history.
+- Manual references and file handlers remain protected.
+- Email sending remains disabled.
+
+**What remains untested from this environment**
+- Actual multi-user concurrent access on a real network share.
+- Network disconnect mid-write behaviour on Windows.
+- Full Windows UI automation.
+
+Push to GitHub and run **Build Windows Installer**.
+
+Every data-changing action (import + match, manual match, clear, split, add/remove allocation, re-run matching) now automatically writes to the shared daily workbook `Receipts DD-MM-YYYY.xlsx` and the master history.
+
+- Save status indicator: “Saving…”, “All changes saved”, or “Save failed”.
+- No manual Save button required for normal processing.
+- Atomic writes with lock and .bak backup.
+- If save fails, an error is shown and the action is not treated as committed.
+- On restart, the daily workbook is reloaded.
+- Email sending remains disabled.
+
+- Settings → Data Storage: Browse, Test Connection, Save Location (default `Y:\accounts\Receipts Manager\`).
+- All users share the same folder. If unavailable, processing is blocked (no silent local fallback).
+- Daily workbook: `Receipts DD-MM-YYYY.xlsx` (processing date). Contains Receipts + Allocations sheets.
+- Master `Receipts History.xlsx` for occurrence-based duplicate detection across days.
+- Bulk allocation lines saved permanently; drafts and Fully/Partially Allocated statuses preserved.
+- Processing lock so only one user works at a time; .bak backups on every write.
+- Manual references and file handlers remain protected.
+- Email sending still disabled.
+
+Push to GitHub and run **Build Windows Installer**.
 
 - Clicking **Split** expands a fully functional allocation panel under the receipt.
 - Add / edit / remove allocation lines; enter reference + amount; Match each line.
@@ -32,9 +98,8 @@ Push to GitHub and run **Build Windows Installer** for the v1.2 setup executable
 
 **To obtain the installer:** push to GitHub and run the “Build Windows Installer” workflow. Download the artifact. Settings and local history are preserved on upgrade because they live in `%LocalAppData%\BankReceiptsManager`.
 
-**Build**  
-The Windows installer (`BankReceiptsManager-Setup.exe`) is produced by the GitHub Actions workflow
-`.github/workflows/build-installer.yml` on a Windows runner (unit tests run first) and published as the `BankReceiptsManager-Setup` artifact.
+**Environment limitation (important)**  
+This development environment is a Linux sandbox without the Windows-only .NET WPF toolchain. It is not possible to compile a Windows executable or create a Windows installer from this environment. No downloadable installer has been produced.
 
 **What has been delivered**  
 - Complete source code for **Milestone 1** with **real** (not demo) reference matching against the four live sources.  
@@ -81,6 +146,7 @@ dotnet publish src\BankReceiptsManager\BankReceiptsManager.csproj -c Release -r 
 
 - Replace the JSON history with ClosedXML Excel writes to `Y:\accounts\Receipts Manager\`.  
 - Implement processing lock.  
+- Wire live CSV/XLS case report and Mailinfo paths.  
 - Add Outlook COM or Microsoft.Office.Interop.Outlook for drafts.  
 - Build remaining navigation items.
 
