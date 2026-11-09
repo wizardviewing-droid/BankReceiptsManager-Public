@@ -23,7 +23,11 @@ public class CaseLookupService
         if (!File.Exists(path))
             throw new FileNotFoundException($"Case report not found: {path}");
 
-        var table = LookupFileReader.ReadFirstSheet(path);
+        System.Text.Encoding.RegisterProvider(System.Text.CodePagesEncodingProvider.Instance);
+
+        using var stream = File.Open(path, FileMode.Open, FileAccess.Read, FileShare.ReadWrite);
+        using var reader = ExcelReaderFactory.CreateReader(stream);
+        var table = reader.AsDataSet().Tables[0];
 
         for (int r = 1; r < table.Rows.Count; r++) // skip header
         {
