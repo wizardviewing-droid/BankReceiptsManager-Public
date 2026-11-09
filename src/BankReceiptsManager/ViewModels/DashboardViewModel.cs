@@ -195,6 +195,8 @@ public partial class DashboardViewModel : ObservableObject
             await RunMatchingInternal();
 
             StatusMessage = $"Imported {TotalImported} receipts totalling {TotalValue:C2} (GBP). Matching complete.";
+            UpdateCounts();
+            ApplyFilter();
             await AutoSaveAsync();
         }
         catch (Exception ex)
